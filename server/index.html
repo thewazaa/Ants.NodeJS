@@ -1,0 +1,389 @@
+<html>
+<head>
+    <title>Experiment</title>
+    <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/android-icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
+    <meta name="theme-color" content="#ffffff">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #menu {
+            background-color: #BBB;
+            margin: 0;
+            padding: 0;
+        }
+
+            #menu h1 {
+                display: inline;
+            }
+
+            #menu ul {
+                list-style-type: none;
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+                background-color: #333;
+            }
+
+            #menu li {
+                float: left;
+            }
+
+                #menu li a {
+                    display: block;
+                    color: white;
+                    text-align: center;
+                    padding: 14px 16px;
+                    text-decoration: none;
+                }
+
+                    /* Change the link color to #111 (black) on hover */
+                    #menu li a:hover {
+                        background-color: #111;
+                    }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .main {
+            display: flex;
+        }
+
+        .scenario {
+            width: 300px;
+            left: 0;
+        }
+
+        .stats {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="menu">
+        <h1>Ants</h1>
+        <ul>
+            <li><a href="#" onclick="ants.reset(); return false;">Reset</a></li>
+            <li><a href="#" onclick="ants.addMeal(); return false;">Add meal</a></li>
+        </ul>
+    </div>
+    <div class="main">
+        <div class="scenario">
+            <canvas id="map" width="300" height="700" class="map" />
+        </div>
+        <div class="stats">
+            <table id="info"></table>
+            <table id="infoAnts"></table>
+        </div>
+
+    </div>
+    <script>
+        class Ants {
+            constructor(id, idInfo, idInfoAnts) {
+                this.total = 0;
+                this.id = id;
+                this.idInfo = idInfo;
+                this.idInfoAnts = idInfoAnts;
+                this.img = document.getElementById(this.id);
+                this.info = document.getElementById(this.idInfo);
+                this.infoAnts = document.getElementById(this.idInfoAnts);
+
+                this.ctx = this.img.getContext('2d');
+                this.selectedNest = -1;
+
+                this.terrain = new Image();
+                this.mealAnts = new Image();
+
+                this.getTerrain();
+            }
+
+            getTerrain() {
+                var vr = this;
+                var request = new XMLHttpRequest();
+                request.open('GET', '/info/img/terrain', true);
+                request.send(null);
+                request.onload = function () {
+                    if (request.readyState === 4 && request.status === 200) {
+                        vr.terrain.src = request.responseText;
+                    }
+                }
+            }
+
+            getMealAnts() {
+                var vr = this;
+                var request = new XMLHttpRequest();
+
+                this.total++;
+
+                request.open('GET', '/info/img/mealAnts' + this.total, true);
+                request.send(null);
+                request.onload = function () {
+                    if (request.readyState === 4 && request.status === 200) {
+                        vr.mealAnts.src = request.responseText;
+                    }
+                }
+            }
+
+            addAntNest(table, i, antNest) {
+                var tr = document.getElementById("infotr" + i);
+                if (tr == null) {
+                    var i2 = i - 1;
+                    tr = document.createElement("tr");
+                    tr.setAttribute("id", "infotr" + i);
+
+                    this.addTdOrTh(tr, "th", document.createTextNode(i));
+                    this.addTdOrTh(tr, "td", document.createTextNode(antNest.x), "x" + i);
+                    this.addTdOrTh(tr, "td", document.createTextNode(antNest.y), "y" + i);
+                    this.addTdOrTh(tr, "td", document.createTextNode(antNest.area), "area" + i);
+                    this.addTdOrTh(tr, "td", document.createTextNode(antNest.color), "color" + i);
+                    this.addTdOrTh(tr, "td", document.createTextNode(antNest.meal), "meal" + i);
+                    this.addTdOrTh(tr, "td", document.createTextNode(antNest.lifeAnts), "lifeAnts" + i);
+                    this.addTdOrTh(tr, "td", document.createTextNode(antNest.deaths), "deaths" + i);
+                    this.addTdOrTh(tr, "td", this.getdAction("Select", "ants.select(" + i2 + ")"));
+
+
+                    table.appendChild(tr);
+                } else {
+                    this.replaceTdOrTh(document.createTextNode(antNest.x), "x" + i);
+                    this.replaceTdOrTh(document.createTextNode(antNest.y), "y" + i);
+                    this.replaceTdOrTh(document.createTextNode(antNest.area), "area" + i);
+                    this.replaceTdOrTh(document.createTextNode(antNest.color), "color" + i);
+                    this.replaceTdOrTh(document.createTextNode(antNest.meal), "meal" + i);
+                    this.replaceTdOrTh(document.createTextNode(antNest.lifeAnts), "lifeAnts" + i);
+                    this.replaceTdOrTh(document.createTextNode(antNest.deaths), "deaths" + i);
+                }
+            }
+
+            addAntNestDetails(table, i, ant) {
+                var tr = document.createElement("tr");
+                tr.setAttribute("id", "infotr" + i);
+
+                this.addTdOrTh(tr, "th", document.createTextNode(i), null, '10%');
+                this.addTdOrTh(tr, "td", document.createTextNode(ant.type), "type" + i, '10%');
+                this.addTdOrTh(tr, "td", document.createTextNode(ant.x), "x" + i, '20%');
+                this.addTdOrTh(tr, "td", document.createTextNode(ant.y), "y" + i, '20%');
+                this.addTdOrTh(tr, "td", document.createTextNode(ant.meal), "meal" + i, '20%');
+                this.addTdOrTh(tr, "td", document.createTextNode(ant.life), "life" + i, '20%');
+
+                table.appendChild(tr);
+            }
+
+            addAntNestsDetails(table, ants) {
+                while (table.childElementCount > 1)
+                    table.removeChild(table.lastChild);
+                for (var i = 0; i < ants.length; i++)
+                    this.addAntNestDetails(table, i + 1, ants[i]);
+            }
+
+            drawFillInfo(antNest) {
+                this.ctx.fillStyle = antNest.color;
+                this.ctx.globalAlpha = .1;
+                this.ctx.fillRect(299, 699 - antNest.lifeAnts, 1, antNest.lifeAnts + 1);
+            }
+
+            drawLineInfo(antNest) {
+                this.ctx.fillStyle = antNest.color;
+                this.ctx.globalAlpha = 1;
+                this.ctx.fillRect(299, 699 - antNest.lifeAnts, 1, 1);
+            }
+
+            addAntNests(table, antNests) {
+                this.ctx.drawImage(this.ctx.canvas, 1, 300, 299, 400, 0, 300, 299, 400);
+                this.ctx.fillStyle = "#333";
+                this.ctx.fillRect(299, 300, 1, 400);
+                for (var i = 0; i < antNests.length; i++)
+                    this.drawFillInfo(antNests[i]);
+                for (var i = 0; i < antNests.length; i++)
+                    this.drawLineInfo(antNests[i]);
+                for (var i = 0; i < antNests.length; i++)
+                    this.addAntNest(table, i + 1, antNests[i]);
+            }
+
+            replaceTdOrTh(text, id) {
+                var tdOrTh = document.getElementById(id);
+                if (id != null && id.startsWith("color"))
+                    tdOrTh.setAttribute("style", "background-color: " + text.nodeValue);
+                tdOrTh.replaceChild(text, tdOrTh.lastChild);
+            }
+
+            addTdOrTh(tr, type, text, id, width) {
+                var tdOrTh = document.createElement(type);
+                if (id !== null)
+                    tdOrTh.setAttribute("id", id);
+                tdOrTh.appendChild(text);
+                if (id != null && id.startsWith("color"))
+                    tdOrTh.setAttribute("style", "background-color: " + text.nodeValue);
+                else if (width != null)
+                    tdOrTh.setAttribute("style", "width: " + width);
+                tr.appendChild(tdOrTh);
+            }
+
+            getdAction(text, action) {
+                var a = document.createElement("a");
+
+                a.appendChild(document.createTextNode(text));
+                a.setAttribute("href", "#")
+                a.onclick = function () { eval(action); };
+                return a;
+            }
+
+            addHeader(table) {
+                var tr = document.getElementById("infotr");
+                if (tr == null) {
+                    tr = document.createElement("tr");
+                    tr.setAttribute("id", "infotr");
+
+                    this.addTdOrTh(tr, "th", document.createTextNode(""), null, '10%');
+                    this.addTdOrTh(tr, "th", document.createTextNode("x"), null, '10%');
+                    this.addTdOrTh(tr, "th", document.createTextNode("y"), null, '10%');
+                    this.addTdOrTh(tr, "th", document.createTextNode("area"), null, '10%');
+                    this.addTdOrTh(tr, "th", document.createTextNode("color"), null, '10%');
+                    this.addTdOrTh(tr, "th", document.createTextNode("meal"), null, '10%');
+                    this.addTdOrTh(tr, "th", document.createTextNode("lifeAnts"), null, '10%');
+                    this.addTdOrTh(tr, "th", document.createTextNode("deaths"), null, '10%');
+                    this.addTdOrTh(tr, "th", this.getdAction("Unselect", "ants.select(-1)"), null, '20%');
+
+                    table.appendChild(tr);
+                }
+            }
+
+            addHeaderAnts(table) {
+                var tr = document.getElementById("infoAntstr");
+                if (tr == null) {
+                    tr = document.createElement("tr");
+                    tr.setAttribute("id", "infoAntstr");
+
+                    this.addTdOrTh(tr, "th", document.createTextNode(""));
+                    this.addTdOrTh(tr, "th", document.createTextNode("type"));
+                    this.addTdOrTh(tr, "th", document.createTextNode("x"));
+                    this.addTdOrTh(tr, "th", document.createTextNode("y"));
+                    this.addTdOrTh(tr, "th", document.createTextNode("meal"));
+                    this.addTdOrTh(tr, "th", document.createTextNode("life"));
+
+                    table.appendChild(tr);
+                }
+            }
+
+            getInfo() {
+                var vr = this;
+                var request = new XMLHttpRequest();
+                request.open('GET', '/info/json/general' + this.total, true);
+                request.send(null);
+                request.onload = function () {
+                    if (request.readyState === 4 && request.status === 200) {
+                        var json = JSON.parse(request.responseText);
+                        vr.addHeader(vr.info);
+                        vr.addAntNests(vr.info, json.antNest);
+                    }
+                }
+            }
+
+            getInfoAnts() {
+                if (this.selectedNest == -1) {
+                    while (this.infoAnts.childElementCount > 0)
+                        this.infoAnts.removeChild(this.infoAnts.lastChild);
+                    return;
+                }
+                var vr = this;
+                var request = new XMLHttpRequest();
+                request.open('GET', '/info/json/nest' + this.total + "?nest=" + this.selectedNest, true);
+                request.send(null);
+                request.onload = function () {
+                    if (request.readyState === 4 && request.status === 200) {
+                        var json = JSON.parse(request.responseText);
+                        vr.addHeaderAnts(vr.infoAnts);
+                        vr.addAntNestsDetails(vr.infoAnts, json);
+                    }
+                }
+            }
+
+            draw() {
+                this.ctx.drawImage(this.terrain, 0, 0);
+                this.ctx.drawImage(this.mealAnts, 0, 0);
+            }
+
+            addMeal() {
+                var vr = this;
+                var request = new XMLHttpRequest();
+                request.open('GET', '/operation/addMeal', true);
+                request.send(null);
+                request.onload = function () {
+                    if (request.readyState === 4 && request.status === 200) {
+                    }
+                }
+            }
+
+            reset() {
+                var vr = this;
+                var request = new XMLHttpRequest();
+                request.open('GET', '/operation/reset', true);
+                request.send(null);
+                request.onload = function () {
+                    if (request.readyState === 4 && request.status === 200) {
+                        vr.getTerrain();
+                    }
+                }
+                this.select(-1);
+            }
+
+            select(i) {
+                this.selectedNest = i;
+
+                var vr = this;
+                var request = new XMLHttpRequest();
+                request.open('GET', '/operation/selectNest?nest=' + i, true);
+                request.send(null);
+                request.onload = function () {
+                }
+                return false;
+            }
+
+            static run(obj) {
+                setInterval((function () {
+                    obj.getMealAnts();
+                }), 66);
+
+                setInterval((function () {
+                    obj.draw();
+                }), 66);
+
+                setInterval((function () {
+                    obj.getInfo();
+                }), 100);
+
+                setInterval((function () {
+                    obj.getInfoAnts();
+                }), 100);
+            }
+        }
+
+        var ants = new Ants("map", "info", "infoAnts");
+        Ants.run(ants);
+    </script>
+</body>
+</html>
